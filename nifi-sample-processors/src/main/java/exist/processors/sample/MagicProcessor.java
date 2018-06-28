@@ -45,44 +45,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Tags({"example", "custom processor"})
-@CapabilityDescription("Generates new flowfile")
-@SeeAlso({})
-@ReadsAttributes({@ReadsAttribute(attribute="None", description="None")})
-@WritesAttributes({@WritesAttribute(attribute="filename", description="The generated flowfile will have this attribute " +
-"with the corresponding value of 'newFlowFile.txt'")})
-public class MyProcessor extends AbstractProcessor {
+@CapabilityDescription("Magic")
+public class MagicProcessor extends AbstractProcessor {
 
-    public static final PropertyDescriptor MY_PROPERTY = new PropertyDescriptor
-        .Builder().name("MY_PROPERTY")
-        .displayName("My property")
-        .description("Sample required property")
-        .required(true)
+    public static final PropertyDescriptor PROP_MAGIC_STRING = new PropertyDescriptor
+        .Builder().name("MAGIC_STRING")
+        .displayName("Magic String")
+        .description("The magic string")
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
-        .build();
-
-    public static final PropertyDescriptor ANOTHER_PROPERTY = new PropertyDescriptor
-        .Builder().name("Another Property")
-        .displayName("Another Prop")
-        .description("Sample optional property")
-        .build();
-
-    public static final PropertyDescriptor FORCE_FAILURE_PROPERTY = new PropertyDescriptor
-        .Builder().name("Force failure")
-        .displayName("Force Failure")
-        .description("Route base on value")
-        .required(true)
-        .allowableValues("true", "false")
-        .defaultValue("false")
-        .build();
-
-    public static final PropertyDescriptor NUMBER_OF_COPIES = new PropertyDescriptor
-        .Builder().name("Number of Copies")
-        .displayName("Number of Copies")
-        .required(true)
-        .defaultValue("50")
-        .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
         .build();
 
     public static final Relationship REL_SUCCESS = new Relationship.Builder()
@@ -102,10 +75,7 @@ public class MyProcessor extends AbstractProcessor {
     @Override
     protected void init(final ProcessorInitializationContext context) {
         final List<PropertyDescriptor> descriptors = new ArrayList<PropertyDescriptor>();
-        descriptors.add(MY_PROPERTY);
-        descriptors.add(ANOTHER_PROPERTY);
-        descriptors.add(FORCE_FAILURE_PROPERTY);
-        descriptors.add(NUMBER_OF_COPIES);
+        descriptors.add(PROP_MAGIC_STRING);
         this.descriptors = Collections.unmodifiableList(descriptors);
 
         final Set<Relationship> relationships = new HashSet<Relationship>();
@@ -134,12 +104,15 @@ public class MyProcessor extends AbstractProcessor {
         FlowFile flowFile = session.get();
 
         if(flowFile == null) {
-            return;
+            flowFile = session.create();
         }
 
         flowFile = session.write(flowFile, (inputStream, outputStream) -> {
             String origContent = IOUtils.toString(inputStream, "UTF-8");
-            String newContent = "****Prepend****" + origContent + "*****Append******";
+            String newContent = Arrays.stream(origContent.split(""))
+                                      .map(s -> s + context.getProperty(PROP_MAGIC_STRING).getValue())
+                                      .collect(Collectors.joining(""));
+
             outputStream.write(newContent.getBytes("UTF-8"));
         });
 

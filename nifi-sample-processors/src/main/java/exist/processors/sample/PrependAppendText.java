@@ -48,42 +48,22 @@ import java.util.Set;
 
 @Tags({"example", "custom processor"})
 @CapabilityDescription("Generates new flowfile")
-@SeeAlso({})
-@ReadsAttributes({@ReadsAttribute(attribute="None", description="None")})
-@WritesAttributes({@WritesAttribute(attribute="filename", description="The generated flowfile will have this attribute " +
-"with the corresponding value of 'newFlowFile.txt'")})
-public class MyProcessor extends AbstractProcessor {
+public class PrependAppendText extends AbstractProcessor {
 
-    public static final PropertyDescriptor MY_PROPERTY = new PropertyDescriptor
-        .Builder().name("MY_PROPERTY")
-        .displayName("My property")
-        .description("Sample required property")
-        .required(true)
+    public static final PropertyDescriptor PROP_PREPEND_TEXT = new PropertyDescriptor
+        .Builder().name("PREPEND_TEXT")
+        .displayName("Prepend Text")
+        .description("Text to be prepended")
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
         .build();
 
-    public static final PropertyDescriptor ANOTHER_PROPERTY = new PropertyDescriptor
-        .Builder().name("Another Property")
-        .displayName("Another Prop")
-        .description("Sample optional property")
+    public static final PropertyDescriptor PROP_APPEND_TEXT = new PropertyDescriptor
+        .Builder().name("APPEND_TEXT")
+        .displayName("Append Text")
+        .description("Text to be appended")
+        .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
         .build();
 
-    public static final PropertyDescriptor FORCE_FAILURE_PROPERTY = new PropertyDescriptor
-        .Builder().name("Force failure")
-        .displayName("Force Failure")
-        .description("Route base on value")
-        .required(true)
-        .allowableValues("true", "false")
-        .defaultValue("false")
-        .build();
-
-    public static final PropertyDescriptor NUMBER_OF_COPIES = new PropertyDescriptor
-        .Builder().name("Number of Copies")
-        .displayName("Number of Copies")
-        .required(true)
-        .defaultValue("50")
-        .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
-        .build();
 
     public static final Relationship REL_SUCCESS = new Relationship.Builder()
         .name("SUCCESS")
@@ -102,10 +82,8 @@ public class MyProcessor extends AbstractProcessor {
     @Override
     protected void init(final ProcessorInitializationContext context) {
         final List<PropertyDescriptor> descriptors = new ArrayList<PropertyDescriptor>();
-        descriptors.add(MY_PROPERTY);
-        descriptors.add(ANOTHER_PROPERTY);
-        descriptors.add(FORCE_FAILURE_PROPERTY);
-        descriptors.add(NUMBER_OF_COPIES);
+        descriptors.add(PROP_APPEND_TEXT);
+        descriptors.add(PROP_PREPEND_TEXT);
         this.descriptors = Collections.unmodifiableList(descriptors);
 
         final Set<Relationship> relationships = new HashSet<Relationship>();
@@ -134,12 +112,15 @@ public class MyProcessor extends AbstractProcessor {
         FlowFile flowFile = session.get();
 
         if(flowFile == null) {
-            return;
+            flowFile = session.create();
         }
 
         flowFile = session.write(flowFile, (inputStream, outputStream) -> {
             String origContent = IOUtils.toString(inputStream, "UTF-8");
-            String newContent = "****Prepend****" + origContent + "*****Append******";
+            String newContent = context.getProperty(PROP_PREPEND_TEXT).getValue()
+                                + origContent
+                                + context.getProperty(PROP_APPEND_TEXT).getValue();
+
             outputStream.write(newContent.getBytes("UTF-8"));
         });
 
