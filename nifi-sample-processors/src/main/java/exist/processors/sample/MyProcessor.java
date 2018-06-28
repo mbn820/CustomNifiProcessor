@@ -1,19 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to the Apache Software Foundation (ASF) under one or more
+* contributor license agreements.  See the NOTICE file distributed with
+* this work for additional information regarding copyright ownership.
+* The ASF licenses this file to You under the Apache License, Version 2.0
+* (the "License"); you may not use this file except in compliance with
+* the License.  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 package exist.processors.sample;
 
 import org.apache.nifi.components.PropertyDescriptor;
@@ -50,41 +50,49 @@ import java.util.Set;
 @SeeAlso({})
 @ReadsAttributes({@ReadsAttribute(attribute="None", description="None")})
 @WritesAttributes({@WritesAttribute(attribute="filename", description="The generated flowfile will have this attribute " +
-                                                                      "with the corresponding value of 'newFlowFile.txt'")})
+"with the corresponding value of 'newFlowFile.txt'")})
 public class MyProcessor extends AbstractProcessor {
 
     public static final PropertyDescriptor MY_PROPERTY = new PropertyDescriptor
-            .Builder().name("MY_PROPERTY")
-            .displayName("My property")
-            .description("Sample required property")
-            .required(true)
-            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
-            .build();
+        .Builder().name("MY_PROPERTY")
+        .displayName("My property")
+        .description("Sample required property")
+        .required(true)
+        .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+        .build();
 
     public static final PropertyDescriptor ANOTHER_PROPERTY = new PropertyDescriptor
-            .Builder().name("Another Property")
-            .displayName("Another Prop")
-            .description("Sample optional property")
-            .build();
+        .Builder().name("Another Property")
+        .displayName("Another Prop")
+        .description("Sample optional property")
+        .build();
 
     public static final PropertyDescriptor FORCE_FAILURE_PROPERTY = new PropertyDescriptor
-            .Builder().name("Force failure")
-            .displayName("Force Failure")
-            .description("Route base on value")
-            .required(true)
-            .allowableValues("true", "false")
-            .defaultValue("false")
-            .build();
+        .Builder().name("Force failure")
+        .displayName("Force Failure")
+        .description("Route base on value")
+        .required(true)
+        .allowableValues("true", "false")
+        .defaultValue("false")
+        .build();
+
+    public static final PropertyDescriptor NUMBER_OF_COPIES = new PropertyDescriptor
+        .Builder().name("Number of Copies")
+        .displayName("Number of Copies")
+        .required(true)
+        .defaultValue("50")
+        .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
+        .build();
 
     public static final Relationship REL_SUCCESS = new Relationship.Builder()
-            .name("SUCCESS")
-            .description("Success goes here")
-            .build();
+        .name("SUCCESS")
+        .description("Success goes here")
+        .build();
 
     public static final Relationship REL_FAILURE = new Relationship.Builder()
-            .name("FAILURE")
-            .description("Failure goes here")
-            .build();
+        .name("FAILURE")
+        .description("Failure goes here")
+        .build();
 
     private List<PropertyDescriptor> descriptors;
 
@@ -96,6 +104,7 @@ public class MyProcessor extends AbstractProcessor {
         descriptors.add(MY_PROPERTY);
         descriptors.add(ANOTHER_PROPERTY);
         descriptors.add(FORCE_FAILURE_PROPERTY);
+        descriptors.add(NUMBER_OF_COPIES);
         this.descriptors = Collections.unmodifiableList(descriptors);
 
         final Set<Relationship> relationships = new HashSet<Relationship>();
@@ -121,19 +130,10 @@ public class MyProcessor extends AbstractProcessor {
 
     @Override
     public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
-        boolean shouldFail = context.getProperty(FORCE_FAILURE_PROPERTY).asBoolean();
-        FlowFile newFlowFile = session.create();
-
-        newFlowFile = session.putAttribute(newFlowFile, "filename", "newFlowFile.txt");
-
-        session.write(newFlowFile, (outputStream) -> {
-            outputStream.write("Flowfile Content".getBytes(StandardCharsets.UTF_8));
-        });
-
-        if(shouldFail) {
-            session.transfer(newFlowFile, REL_FAILURE);
-        } else {
-            session.transfer(newFlowFile, REL_SUCCESS);
+        for(int i = 0; i < context.getProperty(NUMBER_OF_COPIES).asInteger(); i++) {
+            FlowFile copy = session.create();
+            copy = session.putAttribute(copy, "filename", "newFlowFile_" + i + ".txt");
+            session.transfer(copy, REL_SUCCESS);
         }
     }
 
