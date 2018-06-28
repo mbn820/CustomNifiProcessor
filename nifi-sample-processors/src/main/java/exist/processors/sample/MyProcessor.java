@@ -138,3 +138,5 @@ public class MyProcessor extends AbstractProcessor {
     }
 
 }
+
+// test comment
